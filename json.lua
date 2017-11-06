@@ -9,6 +9,18 @@
 
 local json = { _version = "0.1.0" }
 
+local char
+do
+  local ok, utf8 = pcall(require, 'utf8')
+  if ok then
+    local ch = utf8.char(0xD6)
+
+    if ch == 'Ö' or ch == string.char(0xC3, 0x96) then
+      char = utf8.char
+    end
+  end
+end
+
 -------------------------------------------------------------------------------
 -- Null Representation
 -------------------------------------------------------------------------------
@@ -188,7 +200,7 @@ local function decode_error(str, idx, msg)
   error( string.format("%s at line %d col %d", msg, line_count, col_count) )
 end
 
-local function codepoint_to_utf8(n)
+local codepoint_to_utf8 = char or function (n)
   -- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
   local f = math.floor
   if n <= 0x7f then
