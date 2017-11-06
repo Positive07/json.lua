@@ -71,7 +71,7 @@ local function encode_table(val, stack)
   stack = stack or {}
 
   -- Circular reference?
-  if stack[val] then error("circular reference") end
+  if stack[val] then error("Invalid table: circular reference") end
 
   stack[val] = true
 
@@ -80,13 +80,13 @@ local function encode_table(val, stack)
     local n = 0
     for k in pairs(val) do
       if type(k) ~= "number" then
-        error("invalid table: mixed or invalid key types")
+        error("Invalid table: mixed or invalid key types")
       end
       n = n + 1
     end
 
     if n ~= #val then
-      error("invalid table: sparse array")
+      error("Invalid table: sparse array")
     end
     -- Encode
     for _, v in ipairs(val) do
@@ -100,7 +100,7 @@ local function encode_table(val, stack)
     -- Treat as an object
     for k, v in pairs(val) do
       if type(k) ~= "string" then
-        error("invalid table: mixed or invalid key types")
+        error("Invalid table: mixed or invalid key types")
       end
 
       table.insert(res, encode(k, stack) .. ":" .. encode(v, stack))
@@ -119,7 +119,7 @@ end
 local function encode_number(val)
   -- Check for NaN, -inf and inf
   if val ~= val or val <= -math.huge or val >= math.huge then
-    error("unexpected number value '" .. tostring(val) .. "'")
+    error("Unexpected number value '" .. tostring(val) .. "'")
   end
 
   return string.format("%.14g", val)
@@ -141,11 +141,11 @@ encode = function(val, stack)
     return f(val, stack)
   end
 
-  error("unexpected type '" .. t .. "'")
+  error("Unexpected type '" .. t .. "'")
 end
 
 function json.encode(val)
-  return ( encode(val) )
+  return (encode(val))
 end
 
 -------------------------------------------------------------------------------
@@ -197,7 +197,7 @@ local function decode_error(str, idx, msg)
     end
   end
 
-  error( string.format("%s at line %d col %d", msg, line_count, col_count) )
+  error(string.format("%s at line %d col %d", msg, line_count, col_count))
 end
 
 local codepoint_to_utf8 = char or function (n)
@@ -216,15 +216,15 @@ local codepoint_to_utf8 = char or function (n)
     return string.char(a, b, c, d)
   end
 
-  error( string.format("Invalid unicode codepoint '%x'", n) )
+  error(string.format("Invalid unicode codepoint '%x'", n))
 end
 
 local function parse_unicode_escape(s)
-  local n1 = tonumber( s:sub(3, 6),  16 )
-  local n2 = tonumber( s:sub(9, 12), 16 )
+  local n1 = tonumber(s:sub(3, 6),  16)
+  local n2 = tonumber(s:sub(9, 12), 16)
   -- Surrogate pair?
   if n2 then
-    return codepoint_to_utf8((n1 - 0xd800) * 0x400 + (n2 - 0xdc00) + 0x10000)
+    return codepoint_to_utf8((n1 - 0xD800) * 0x400 + (n2 - 0xDC00) + 0x10000)
   else
     return codepoint_to_utf8(n1)
   end
@@ -240,7 +240,7 @@ local function parse_string(str, i)
     local x = str:byte(j)
 
     if x < 32 then
-      decode_error(str, j, "control character in string")
+      decode_error(str, j, "Control character in string")
     end
 
     if last == 92 then -- "\\" (escape char)
@@ -248,7 +248,7 @@ local function parse_string(str, i)
         local hex = str:sub(j + 1, j + 5)
 
         if not hex:find("%x%x%x%x") then
-          decode_error(str, j, "invalid unicode escape in string")
+          decode_error(str, j, "Invalid unicode escape in string")
         end
         if hex:find("^[dD][89aAbB]") then
           has_surrogate_escape = true
@@ -259,7 +259,7 @@ local function parse_string(str, i)
         local c = string.char(x)
 
         if not escape_chars[c] then
-          decode_error(str, j, "invalid escape char '" .. c .. "' in string")
+          decode_error(str, j, "Invalid escape char '" .. c .. "' in string")
         end
 
         has_escape = true
@@ -285,7 +285,7 @@ local function parse_string(str, i)
     end
   end
 
-  decode_error(str, i, "expected closing quote for string")
+  decode_error(str, i, "Expected closing quote for string")
 end
 
 local function parse_number(str, i)
@@ -294,7 +294,7 @@ local function parse_number(str, i)
   local n = tonumber(s)
 
   if not n then
-    decode_error(str, i, "invalid number '" .. s .. "'")
+    decode_error(str, i, "Invalid number '" .. s .. "'")
   end
 
   return n, x
@@ -305,7 +305,7 @@ local function parse_literal(str, i)
   local word = str:sub(i, x - 1)
 
   if not literals[word] then
-    decode_error(str, i, "invalid literal '" .. word .. "'")
+    decode_error(str, i, "Invalid literal '" .. word .. "'")
   end
 
   return literal_map[word], x
@@ -334,7 +334,7 @@ local function parse_array(str, i)
     i = i + 1
 
     if chr == "]" then break end
-    if chr ~= "," then decode_error(str, i, "expected ']' or ','") end
+    if chr ~= "," then decode_error(str, i, "Expected ']' or ','") end
   end
 
   return res, i
@@ -355,13 +355,13 @@ local function parse_object(str, i)
     end
     -- Read key
     if str:sub(i, i) ~= '"' then
-      decode_error(str, i, "expected string for key")
+      decode_error(str, i, "Expected string for key")
     end
     key, i = parse(str, i)
     -- Read ':' delimiter
     i = next_char(str, i, space_chars, true)
     if str:sub(i, i) ~= ":" then
-      decode_error(str, i, "expected ':' after key")
+      decode_error(str, i, "Expected ':' after key")
     end
     i = next_char(str, i + 1, space_chars, true)
     -- Read value
@@ -374,7 +374,7 @@ local function parse_object(str, i)
     i = i + 1
 
     if chr == "}" then break end
-    if chr ~= "," then decode_error(str, i, "expected '}' or ','") end
+    if chr ~= "," then decode_error(str, i, "Expected '}' or ','") end
   end
 
   return res, i
@@ -408,15 +408,15 @@ parse = function(str, idx)
     return f(str, idx)
   end
 
-  decode_error(str, idx, "unexpected character '" .. chr .. "'")
+  decode_error(str, idx, "Unexpected character '" .. chr .. "'")
 end
 
 function json.decode(str)
   if type(str) ~= "string" then
-    error("expected argument of type string, got " .. type(str))
+    error("Expected argument of type string, got " .. type(str))
   end
 
-  return ( parse(str, next_char(str, 1, space_chars, true)) )
+  return (parse(str, next_char(str, 1, space_chars, true)))
 end
 
 return json
