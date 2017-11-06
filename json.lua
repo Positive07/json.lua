@@ -203,17 +203,20 @@ end
 local codepoint_to_utf8 = char or function (n)
   -- http://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=iws-appendixa
   local f = math.floor
-  if n <= 0x7f then
+
+  if n <= 0x7F then
     return string.char(n)
-  elseif n <= 0x7ff then
-    return string.char(f(n / 64) + 192, n % 64 + 128)
-  elseif n <= 0xffff then
-    return string.char(f(n / 4096) + 224, f(n % 4096 / 64) + 128, n % 64 + 128)
-  elseif n <= 0x10ffff then
-    return string.char(f(n / 262144) + 240, f(n % 262144 / 4096) + 128,
-                       f(n % 4096 / 64) + 128, n % 64 + 128)
+  elseif n <= 0x7FF then
+    return string.char(f(n / 0x40) + 0xC0, n % 0x40 + 0x80)
+  elseif n <= 0xFFFF then
+    return string.char(f(n / 0x1000) + 0xE0, f(n % 0x1000 / 0x40) + 0x80, n % 0x40 + 0x80)
+  elseif n <= 0x10FFFF then
+    local a, b = f(n / 0x40000) + 0xF0, f(n % 0x40000 / 0x1000) + 0x80
+    local c, d = f(n % 0x1000 / 0x40) + 0x80, n % 0x40 + 0x80
+    return string.char(a, b, c, d)
   end
-  error( string.format("invalid unicode codepoint '%x'", n) )
+
+  error( string.format("Invalid unicode codepoint '%x'", n) )
 end
 
 local function parse_unicode_escape(s)
