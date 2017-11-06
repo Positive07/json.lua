@@ -10,6 +10,18 @@
 local json = { _version = "0.1.0" }
 
 -------------------------------------------------------------------------------
+-- Null Representation
+-------------------------------------------------------------------------------
+
+local null = setmetatable({}, {
+  __tostring = function ()
+    return "null"
+  end
+})
+
+json.null = null
+
+-------------------------------------------------------------------------------
 -- Encode
 -------------------------------------------------------------------------------
 
@@ -39,6 +51,10 @@ local function encode_nil()
 end
 
 local function encode_table(val, stack)
+  if val == null then
+    return "null"
+  end
+
   local res = {}
   stack = stack or {}
 
@@ -144,7 +160,7 @@ local literals      = create_set("true", "false", "null")
 local literal_map = {
   [ "true"  ] = true,
   [ "false" ] = false,
-  [ "null"  ] = nil,
+  [ "null"  ] = null,
 }
 
 local function next_char(str, idx, set, negate)
